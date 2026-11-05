@@ -95,35 +95,123 @@ if (navBackdrop) navBackdrop.addEventListener('click', closeMobileDrawer);
 
 /* ================= USER NAME & GREETING SYNC ================= */
 
-const userNameInput = document.getElementById('userNameInput');
+const sidebarUserName = document.getElementById('sidebarUserName');
+const profileNameDisplay = document.getElementById('profileNameDisplay');
+const profileDisplayName = document.getElementById('profileDisplayName');
 const topbarGreeting = document.getElementById('topbarGreeting');
+const profileEditBtn = document.getElementById('profileEditBtn');
+const profileActionsRow = document.getElementById('profileActionsRow');
+const profileCancelBtn = document.getElementById('profileCancelBtn');
+const profileConfirmBtn = document.getElementById('profileConfirmBtn');
 
-function updateGreeting(name) {
+let currentActiveName = 'Alyssa';
+
+function syncStudentName(name, sourceInput) {
   const trimmed = (name || '').trim();
+  currentActiveName = trimmed || 'Student';
+
+  if (sidebarUserName) {
+    sidebarUserName.textContent = currentActiveName;
+  }
+  if (profileNameDisplay && sourceInput !== profileNameDisplay) {
+    profileNameDisplay.value = trimmed || 'Student';
+  }
+  if (profileDisplayName) {
+    profileDisplayName.textContent = currentActiveName;
+  }
   if (topbarGreeting) {
     topbarGreeting.textContent = trimmed
       ? `Hello ${trimmed}! What are you learning today?`
       : 'Hello! What are you learning today?';
   }
+
+  try {
+    localStorage.setItem('aptivo_user_name', trimmed);
+  } catch (e) {}
 }
 
-if (userNameInput) {
-  try {
-    const savedName = localStorage.getItem('aptivo_user_name');
-    if (savedName !== null) {
-      userNameInput.value = savedName;
+function openProfileEditor() {
+  if (!profileNameDisplay) return;
+  profileNameDisplay.removeAttribute('readonly');
+  profileNameDisplay.classList.add('is-editing');
+  if (profileActionsRow) {
+    profileActionsRow.style.display = 'flex';
+  }
+  profileNameDisplay.focus();
+  profileNameDisplay.select();
+}
+
+function closeProfileEditor() {
+  if (!profileNameDisplay) return;
+  profileNameDisplay.value = currentActiveName;
+  profileNameDisplay.setAttribute('readonly', '');
+  profileNameDisplay.classList.remove('is-editing');
+  if (profileActionsRow) {
+    profileActionsRow.style.display = 'none';
+  }
+}
+
+function confirmProfileName() {
+  if (profileNameDisplay) {
+    const val = profileNameDisplay.value.trim();
+    if (val) {
+      syncStudentName(val);
+    } else {
+      profileNameDisplay.value = currentActiveName;
     }
-  } catch (e) {}
+    profileNameDisplay.setAttribute('readonly', '');
+    profileNameDisplay.classList.remove('is-editing');
+  }
+  if (profileActionsRow) {
+    profileActionsRow.style.display = 'none';
+  }
+}
 
-  updateGreeting(userNameInput.value);
+// Restore saved name
+try {
+  const savedName = localStorage.getItem('aptivo_user_name');
+  if (savedName !== null && savedName !== '') {
+    syncStudentName(savedName);
+  } else {
+    syncStudentName('Alyssa');
+  }
+} catch (e) {
+  syncStudentName('Alyssa');
+}
 
-  userNameInput.addEventListener('input', function() {
-    const val = userNameInput.value;
-    updateGreeting(val);
-    try {
-      localStorage.setItem('aptivo_user_name', val.trim());
-    } catch (e) {}
+if (profileEditBtn) {
+  profileEditBtn.addEventListener('click', function(e) {
+    e.stopPropagation();
+    openProfileEditor();
   });
+}
+
+if (profileNameDisplay) {
+  profileNameDisplay.addEventListener('click', function() {
+    if (profileNameDisplay.hasAttribute('readonly')) {
+      openProfileEditor();
+    }
+  });
+
+  profileNameDisplay.addEventListener('keydown', function(e) {
+    if (!profileNameDisplay.hasAttribute('readonly')) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        confirmProfileName();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeProfileEditor();
+      }
+    }
+  });
+}
+
+if (profileCancelBtn) {
+  profileCancelBtn.addEventListener('click', closeProfileEditor);
+}
+
+if (profileConfirmBtn) {
+  profileConfirmBtn.addEventListener('click', confirmProfileName);
 }
 
 
@@ -224,4 +312,44 @@ function resetMoneyMission() {
   if (missionResult) {
     missionResult.textContent = 'Complete all three challenges to collect your badge!';
   }
+}
+
+/* ================= PROFILE SETTINGS & ACTIONS ================= */
+
+const soundToggle = document.getElementById('soundToggle');
+const soundToggleLabel = document.getElementById('soundToggleLabel');
+let soundEnabled = true;
+
+try {
+  const savedSound = localStorage.getItem('aptivo_sound_enabled');
+  if (savedSound !== null) {
+    soundEnabled = savedSound === '1';
+    if (soundToggleLabel) soundToggleLabel.textContent = soundEnabled ? 'Enabled' : 'Muted';
+  }
+} catch (e) {}
+
+if (soundToggle) {
+  soundToggle.addEventListener('click', function() {
+    soundEnabled = !soundEnabled;
+    if (soundToggleLabel) soundToggleLabel.textContent = soundEnabled ? 'Enabled' : 'Muted';
+    try {
+      localStorage.setItem('aptivo_sound_enabled', soundEnabled ? '1' : '0');
+    } catch (e) {}
+  });
+}
+
+const resetProgressBtn = document.getElementById('resetProgressBtn');
+const settingsFeedback = document.getElementById('settingsFeedback');
+
+if (resetProgressBtn) {
+  resetProgressBtn.addEventListener('click', function() {
+    resetMoneyMission();
+    if (settingsFeedback) {
+      settingsFeedback.textContent = 'Mission progress reset successfully.';
+      settingsFeedback.style.display = 'block';
+      setTimeout(function() {
+        settingsFeedback.style.display = 'none';
+      }, 3000);
+    }
+  });
 }
